@@ -4,12 +4,28 @@ import { Leaf, TrendingDown, Award, BarChart3, Car, Zap, Utensils, Trash2 } from
 import heroImage from "@/assets/hero-earth.jpg";
 import { useState } from "react";
 import Dashboard from "@/components/Dashboard";
+import Auth from "@/components/Auth";
 
 const Index = () => {
   const [showDashboard, setShowDashboard] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  if (showDashboard) {
-    return <Dashboard onBack={() => setShowDashboard(false)} />;
+  const handleLogin = (user: any) => {
+    setCurrentUser(user);
+    setShowDashboard(true);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setShowDashboard(false);
+  };
+
+  if (showDashboard && currentUser) {
+    return <Dashboard user={currentUser} onBack={handleLogout} />;
+  }
+
+  if (!currentUser) {
+    return <Auth onLogin={handleLogin} />;
   }
 
   return (
