@@ -44,17 +44,29 @@ La aplicación está construida con una arquitectura de microservicios:
    cd ecotrack
    ```
 
-2. **Inicia todos los servicios**:
+2. **Configura MongoDB Atlas**:
+   - Crea una cuenta en [MongoDB Atlas](https://www.mongodb.com/atlas)
+   - Crea un cluster gratuito (M0)
+   - Configura un usuario de base de datos y permisos de red
+   - Copia la connection string (mongodb+srv://...)
+
+3. **Inicializa la base de datos** (una sola vez):
+   ```bash
+   npm install mongodb
+   node init-atlas.js
+   ```
+
+4. **Inicia todos los servicios**:
    ```bash
    docker-compose up -d
    ```
 
-3. **Verifica que los servicios estén corriendo**:
+5. **Verifica que los servicios estén corriendo**:
    ```bash
    docker-compose ps
    ```
 
-4. **Accede a la aplicación**:
+6. **Accede a la aplicación**:
    - **Frontend**: http://localhost:3040 🌐
    - API Docs (User Service): http://localhost:8000/docs
    - API Docs (Activity Service): http://localhost:8001/docs
@@ -76,13 +88,13 @@ La aplicación está construida con una arquitectura de microservicios:
 2. **Configura las variables de entorno**:
    ```bash
    cp .env.example .env
-   # Edita .env con tus configuraciones
+   # Edita .env con tu connection string de MongoDB Atlas
    ```
 
-3. **Inicia MongoDB** (local o Atlas):
+3. **Inicializa la base de datos Atlas** (una sola vez):
    ```bash
-   # Con Docker
-   docker run -d -p 27017:27017 --name mongodb mongo:7.0
+   npm install mongodb
+   node init-atlas.js
    ```
 
 4. **Ejecuta los servicios**:
@@ -230,10 +242,10 @@ docker-compose pull && docker-compose up -d
 
 ### Variables de Producción
 
-- Configurar MongoDB Atlas en lugar de instancia local
 - Usar secrets seguros para JWT
 - Configurar CORS para dominios de producción
 - Habilitar HTTPS/SSL
+- Monitorear uso y costos en MongoDB Atlas
 
 ## 🤝 Contribución
 
