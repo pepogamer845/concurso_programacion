@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: ecotrack-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: ecotrack
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - ecotrack-network
+
+  # Frontend React App
+  frontend:
+    build: ./frontend
+    container_name: ecotrack-frontend
+    restart: unless-stopped
+    ports:
+      - "3040:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8000
+      - REACT_APP_USER_SERVICE_URL=http://localhost:8000
+      - REACT_APP_ACTIVITY_SERVICE_URL=http://localhost:8001
+      - REACT_APP_ANALYTICS_SERVICE_URL=http://localhost:8003
+      - REACT_APP_RECOMMENDATION_SERVICE_URL=http://localhost:8004
+    depends_on:
+      - user-service
+      - activity-service
+      - analytics-service
+      - recommendation-service
+    networks:
+      - ecotrack-network
+
+  # User Service
+  user-service:
+    build: ./backend/user-service
+    container_name: ecotrack-user-service
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/ecotrack
+      - DATABASE_NAME=ecotrack
+      - SECRET_KEY=your-super-secret-key-change-in-production
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - ALLOWED_ORIGINS=["http://localhost:3000", "http://localhost:5173"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+    networks:
+      - ecotrack-network
+
+  # Activity Service
+  activity-service:
+    build: ./backend/activity-service
+    container_name: ecotrack-activity-service
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/ecotrack
+      - DATABASE_NAME=ecotrack
+      - CARBON_CALCULATOR_URL=http://carbon-calculator-service:8002
+    ports:
+      - "8001:8001"
+    depends_on:
+      - mongodb
+      - carbon-calculator-service
+    networks:
+      - ecotrack-network
+
+  # Carbon Calculator Service
+  carbon-calculator-service:
+    build: ./backend/carbon-calculator-service
+    container_name: ecotrack-carbon-calculator
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/ecotrack
+      - DATABASE_NAME=ecotrack
+    ports:
+      - "8002:8002"
+    depends_on:
+      - mongodb
+    networks:
+      - ecotrack-network
+
+  # Analytics Service
+  analytics-service:
+    build: ./backend/analytics-service
+    container_name: ecotrack-analytics-service
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/ecotrack
+      - DATABASE_NAME=ecotrack
+      - ACTIVITY_SERVICE_URL=http://activity-service:8001
+    ports:
+      - "8003:8003"
+    depends_on:
+      - mongodb
+      - activity-service
+    networks:
+      - ecotrack-network
+
+  # Recommendation Service
+  recommendation-service:
+    build: ./backend/recommendation-service
+    container_name: ecotrack-recommendation-service
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/ecotrack
+      - DATABASE_NAME=ecotrack
+      - ACTIVITY_SERVICE_URL=http://activity-service:8001
+      - USER_SERVICE_URL=http://user-service:8000
+    ports:
+      - "8004:8004"
+    depends_on:
+      - mongodb
+      - activity-service
+      - user-service
+    networks:
+      - ecotrack-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  ecotrack-network:
+    driver: bridge
