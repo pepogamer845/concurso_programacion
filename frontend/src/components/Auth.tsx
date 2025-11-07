@@ -38,37 +38,63 @@ const Auth = ({ onLogin }: AuthProps) => {
     setIsLoading(true);
 
     try {
-      // Mock login - replace with actual API call
-      if (loginData.email && loginData.password) {
-        const mockUser = {
-          id: "1",
-          name: "Usuario Demo",
-          email: loginData.email,
-          country: "Colombia",
-          profile: {
-            dietType: "omnivore",
-            transportMode: "car",
-            householdSize: 2,
-            carbonGoal: 100,
-          },
-          achievements: [],
-          points: 150,
-          level: 2,
-        };
+      // Real API call to user service
+      const response = await fetch('http://localhost:8000/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
 
-        toast({
-          title: "¡Bienvenido!",
-          description: "Has iniciado sesión exitosamente.",
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.access_token;
+
+        // Get user profile
+        const profileResponse = await fetch('http://localhost:8000/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
         });
 
-        onLogin(mockUser);
+        if (profileResponse.ok) {
+          const userData = await profileResponse.json();
+
+          // Get user achievements and points
+          const achievementsResponse = await fetch('http://localhost:8003/achievements', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          const achievements = achievementsResponse.ok ? await achievementsResponse.json() : [];
+
+          const user = {
+            ...userData,
+            token,
+            achievements,
+            points: 150, // This should come from analytics service
+            level: 2, // This should be calculated based on points
+          };
+
+          toast({
+            title: "¡Bienvenido!",
+            description: `Hola ${user.name}, has iniciado sesión exitosamente.`,
+          });
+
+          onLogin(user);
+        } else {
+          throw new Error("Error al obtener perfil de usuario");
+        }
       } else {
-        throw new Error("Credenciales inválidas");
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Credenciales inválidas");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Credenciales inválidas. Inténtalo de nuevo.",
+        description: error.message || "Error al iniciar sesión. Inténtalo de nuevo.",
         variant: "destructive",
       });
     } finally {
@@ -85,29 +111,71 @@ const Auth = ({ onLogin }: AuthProps) => {
         throw new Error("Las contraseñas no coinciden");
       }
 
-      // Mock registration - replace with actual API call
-      const mockUser = {
-        id: Date.now().toString(),
+      // Real API call to user service
+      const registerPayload = {
         name: registerData.name,
         email: registerData.email,
+        password: registerData.password,
         country: registerData.country,
-        profile: {
-          dietType: registerData.dietType,
-          transportMode: registerData.transportMode,
-          householdSize: registerData.householdSize,
-          carbonGoal: registerData.carbonGoal,
-        },
-        achievements: [],
-        points: 10,
-        level: 1,
+        diet_type: registerData.dietType,
+        transport_mode: registerData.transportMode,
+        household_size: registerData.householdSize,
+        carbon_goal: registerData.carbonGoal,
       };
 
-      toast({
-        title: "¡Cuenta creada!",
-        description: "Tu cuenta ha sido creada exitosamente.",
+      const response = await fetch('http://localhost:8000/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(registerPayload),
       });
 
-      onLogin(mockUser);
+      if (response.ok) {
+        const userData = await response.json();
+
+        toast({
+          title: "¡Cuenta creada!",
+          description: "Tu cuenta ha sido creada exitosamente. Ahora puedes iniciar sesión.",
+        });
+
+        // Automatically login after registration
+        const loginResponse = await fetch('http://localhost:8000/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: registerData.email,
+            password: registerData.password,
+          }),
+        });
+
+        if (loginResponse.ok) {
+          const loginData = await loginResponse.json();
+          const token = loginData.access_token;
+
+          const user = {
+            ...userData,
+            token,
+            achievements: [],
+            points: 10,
+            level: 1,
+          };
+
+          onLogin(user);
+        } else {
+          // Registration successful but login failed - user can login manually
+          setTimeout(() => {
+            // Switch to login tab
+            const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+            if (loginTab) loginTab.click();
+          }, 2000);
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error al crear la cuenta");
+      }
     } catch (error: any) {
       toast({
         title: "Error",

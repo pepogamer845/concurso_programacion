@@ -8,6 +8,7 @@ import ActivityForm from "./dashboard/ActivityForm";
 import ActivityList from "./dashboard/ActivityList";
 import CarbonChart from "./dashboard/CarbonChart";
 import Achievements from "./dashboard/Achievements";
+import ProgressChart from "./dashboard/ProgressChart";
 
 interface DashboardProps {
   user: any;
@@ -60,6 +61,12 @@ const Dashboard = ({ user, onBack }: DashboardProps) => {
 
       {/* Main Content */}
       <main className="container px-4 py-8">
+        {/* Progress Tracking */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Tu Progreso</h2>
+          <ProgressChart user={user} activities={activities} />
+        </div>
+
         {/* Stats Overview */}
         <StatsCards
           totalCarbon={totalCarbon}
